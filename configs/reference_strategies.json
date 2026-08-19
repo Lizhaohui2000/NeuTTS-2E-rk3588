@@ -1,0 +1,19 @@
+{
+  "speaker": "emily",
+  "prefixes": {
+    "103": "What we need, helping us to develop",
+    "207": "What we need, helping us to develop the scope of work for a future procurement."
+  },
+  "strategies": {
+    "fixed207": {
+      "default_reference_codes": 207,
+      "emotion_overrides": {}
+    },
+    "routed103_207": {
+      "default_reference_codes": 103,
+      "emotion_overrides": {
+        "angry": 207
+      }
+    }
+  }
+}

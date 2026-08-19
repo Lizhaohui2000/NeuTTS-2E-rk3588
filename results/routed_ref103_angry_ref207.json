@@ -1,0 +1,50 @@
+{
+  "protocol": "neutts-emotion-routed-reference-policy-v1",
+  "fast_system": "ref103",
+  "safe_system": "ref207",
+  "safe_emotions": [
+    "angry"
+  ],
+  "samples": 15,
+  "selected_fast": 12,
+  "selected_safe": 3,
+  "completeness_failures": 0,
+  "runtime": {
+    "request_rtf": {
+      "mean": 0.8733925327377575,
+      "p50": 0.8480308195396972,
+      "p95": 0.9824085733676187
+    },
+    "aggregate_rtf": 0.8727583939405079
+  },
+  "intelligibility": {
+    "wer": 0.11052631578947368,
+    "emotional_wer": 0.039473684210526314,
+    "complete_emotional_wer": 0.039473684210526314
+  },
+  "quality": {
+    "sig": 4.165112629352869,
+    "bak": 4.375035524598631,
+    "overall": 3.953396906269659
+  },
+  "speaker": {
+    "mean_emotional_similarity": 0.8724328904832009,
+    "worst_emotional_similarity": 0.8344617486000061
+  },
+  "emotion_native": {
+    "accuracy": 0.4666666666666667,
+    "emotional_accuracy": 0.3333333333333333,
+    "mean_target_probability": 0.3883007014388606,
+    "mean_emotional_target_probability": 0.3149991398735475
+  },
+  "emotion_tempo_normalized": {
+    "accuracy": 0.13333333333333333,
+    "emotional_accuracy": 0.0,
+    "mean_target_probability": 0.2771106317121965,
+    "mean_emotional_target_probability": 0.17851002552518572
+  },
+  "limitations": [
+    "The routing rule was selected from this three-text matrix and needs a held-out set.",
+    "Completeness gates do not detect plausible-length intelligibility failures."
+  ]
+}

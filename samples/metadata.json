@@ -1,0 +1,18 @@
+{
+  "speaker": "emily",
+  "text": "This is a real-time board deployment test. The voice should remain clear and expressive for a complete multi-second sentence.",
+  "seed": 42,
+  "temperature": 1.0,
+  "top_k": 50,
+  "sample_rate": 24000,
+  "comparison": {
+    "cpu_onnx": "NeuCodec FP32 ONNX CPU decoder",
+    "rk3588_rknn": "Dynamic RKNN decoder on NPU core012 plus CPU spectral tail"
+  },
+  "same_speech_codes_within_each_pair": true,
+  "samples": [
+    {"emotion": "happy", "speech_tokens": 425, "audio_seconds": 8.5},
+    {"emotion": "sad", "speech_tokens": 353, "audio_seconds": 7.06},
+    {"emotion": "angry", "speech_tokens": 439, "audio_seconds": 8.78}
+  ]
+}

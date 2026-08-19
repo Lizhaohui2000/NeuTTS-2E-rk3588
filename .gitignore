@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.venv/
+build/
+models/
+models_dynamic/
+artifacts/
+outputs/
+*.gguf
+*.onnx
+*.rknn

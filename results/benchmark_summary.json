@@ -1,0 +1,29 @@
+{
+  "protocol": "warm-resident-rk3588-end-to-end-v1",
+  "device": "OrangePi 5 Pro / RK3588 / 16 GB",
+  "backbone": "NeuTTS-2E Q4_K_M, patched llama.cpp, four big CPU cores at 1.8 GHz",
+  "codec": "dynamic NeuCodec RKNN on core012 plus CPU spectral tail",
+  "rtf_definition": "request prompt prefill + autoregressive generation + RKNN decode + CPU ISTFT, excluding process/model initialization",
+  "matrix": {"texts": 3, "conditions": ["neutral", "happy", "sad", "angry", "surprised"], "samples": 15},
+  "strategies": {
+    "fixed207": {
+      "mean_rtf": 0.9819654391593438,
+      "p95_rtf": 1.0078200825052748,
+      "complete_samples": 15,
+      "emotional_wer": 0.02631578947368421,
+      "dnsmos_sig": 4.144547810132774,
+      "speaker_similarity": 0.8735624123603393,
+      "emotion_target_probability": 0.2966681202362531
+    },
+    "routed103_207": {
+      "mean_rtf": 0.8733925327377575,
+      "p95_rtf": 0.9824085733676187,
+      "complete_samples": 15,
+      "emotional_wer": 0.039473684210526314,
+      "dnsmos_sig": 4.165112629352869,
+      "speaker_similarity": 0.8724328904832009,
+      "emotion_target_probability": 0.3149991398735475
+    }
+  },
+  "warning": "The emotion route was selected on this small matrix and requires held-out validation."
+}

@@ -1,0 +1,12 @@
+NeuTTS-2E-RK3588 is an independent RK3588 deployment adaptation of NeuTTS-2E.
+
+NeuTTS and NeuTTS-2E are provided by Neuphonic Limited:
+https://github.com/neuphonic/neutts
+
+The NeuTTS-derived portions of this repository are distributed under the
+NeuTTS Open License v1.0 included in LICENSE. Modified files and new deployment
+code are identified by this repository's Git history and documentation.
+
+The optional llama.cpp patch targets upstream llama.cpp commit
+7acdbb1f191d869bad8c5da9d4a2121defa340af and retains its MIT license. A copy
+is included at third_party/LICENSE-llama.cpp.
