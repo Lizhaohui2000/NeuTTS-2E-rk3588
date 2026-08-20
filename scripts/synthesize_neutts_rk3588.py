@@ -17,7 +17,12 @@ from neucodec_rk3588_split_runtime import (
 )
 from neutts_2e_board_runtime import EMOTIONS
 from neutts_generation_gates import classify_generation_status, word_count
-from reference_strategies import select_reference
+from reference_strategies import (
+    STRATEGY_CONFIG,
+    load_reference_codes,
+    load_strategy_config,
+    select_reference,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -27,8 +32,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--speaker", default="emily")
     parser.add_argument(
         "--strategy",
-        choices=("fixed207", "routed103_207", "natural103"),
-        default="fixed207",
+        default="stable",
+        help="reference mode from --reference-config (default: stable)",
+    )
+    parser.add_argument(
+        "--reference-config",
+        type=Path,
+        default=STRATEGY_CONFIG,
+        help="per-speaker reference profile configuration",
     )
     parser.add_argument("--emotion", choices=EMOTIONS, required=True)
     parser.add_argument("--text", required=True)
@@ -52,19 +63,16 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    strategy = select_reference(args.strategy, args.speaker, args.emotion)
+    reference_config = load_strategy_config(args.reference_config)
+    strategy = select_reference(
+        args.strategy, args.speaker, args.emotion, config=reference_config
+    )
     speakers = json.loads(args.speakers.read_text(encoding="utf-8"))
-    if args.speaker not in speakers:
-        raise ValueError(f"speaker {args.speaker!r} is absent from {args.speakers}")
-    stored_codes = speakers[args.speaker]["codes"]
-    reference_start = int(strategy["reference_code_start"])
-    reference_end = int(strategy["reference_code_end"])
-    if len(stored_codes) < reference_end:
-        raise ValueError(
-            f"speaker reference has {len(stored_codes)} codes, needs index {reference_end}"
-        )
+    reference_codes = load_reference_codes(
+        strategy, speakers, args.reference_config.resolve().parent
+    )
     reference_tokens = "".join(
-        f"<|speech_{code}|>" for code in stored_codes[reference_start:reference_end]
+        f"<|speech_{code}|>" for code in reference_codes
     )
     prompt = (
         f"<|TEXT_PROMPT_START|>{strategy['reference_text']}"

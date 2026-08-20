@@ -2,13 +2,37 @@
 
 Unofficial CPU + NPU deployment of [NeuTTS-2E](https://github.com/neuphonic/neutts) on Rockchip RK3588.
 
-This project keeps the autoregressive NeuTTS-2E Q4_K_M backbone on four RK3588 big CPU cores and moves the NeuCodec decoder to the RKNN NPU. It provides two board-evaluated strategies and one natural-boundary research candidate:
+The Q4_K_M autoregressive backbone runs on four RK3588 big CPU cores. NeuCodec is split into RKNN-friendly stages for the NPU, while numerically sensitive spectral operations remain on the CPU. The measured resident pipeline reaches real time without changing or fine-tuning the original TTS model.
 
-- `fixed207`: always use a 207-code speaker reference; the stable quality default.
-- `routed103_207`: use 103 reference codes normally and 207 for `Angry`; the current low-RTF research candidate.
-- `natural103`: use an equal-length 103-code window aligned to a more complete reference phrase; host-screened for `Angry`, with RK3588 validation pending.
+> This is an independent research adaptation, not an official Neuphonic release. Model weights, ONNX graphs and generated RKNN binaries are not redistributed.
 
-> This repository is an independent research adaptation, not an official Neuphonic release. Model weights and generated RKNN files are not redistributed here.
+## Release modes
+
+Only the following modes are release paths:
+
+| Mode | Reference policy | Status |
+|---|---|---|
+| `stable` | 207 codes for every emotion | Stable quality default |
+| `fast` | 103 codes where board-validated; automatic 207-code fallback otherwise | Board-evaluated low-RTF mode |
+
+For the bundled Emily profile, `fast` uses 103 codes for Neutral, Happy, Sad and Surprised. Angry falls back to 207 because the original 103-code prefix was not reliable for that condition. Other supported but uncalibrated emotions also fall back to `stable`; the published board matrix covers only the five listed conditions.
+
+The legacy names `fixed207` and `routed103_207` remain accepted as aliases for `stable` and `fast`. Research-only short-reference controls are documented in [the complete-context reference study](docs/reference-selection.md); they are not release defaults.
+
+## RK3588 results
+
+Measured on an OrangePi 5 Pro with RK3588 and 16 GB RAM. The Q4_K_M backbone used four big CPU cores fixed at 1.8 GHz. NeuCodec used dynamic RKNN graphs on NPU `core012`, followed by the CPU spectral tail.
+
+RTF includes prompt prefill, autoregressive generation, RKNN decoding and CPU ISTFT for every request. Process and model initialization are excluded.
+
+| Mode | Mean RTF | P95 RTF | Complete | Emotional WER | DNSMOS SIG | Speaker similarity | Emotion target probability |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `stable` | 0.982 | 1.008 | 15/15 | 2.63% | 4.145 | 0.874 | 0.297 |
+| `fast` | **0.873** | **0.982** | **15/15** | 3.95% | **4.165** | 0.872 | **0.315** |
+
+`fast` reduced mean RTF by **11.1%** on this matrix. The matrix contains three English texts and five emotion conditions, so these numbers should not be interpreted as a multi-speaker or large-corpus result. Raw summaries are in [results/benchmark_summary.json](results/benchmark_summary.json) and [results/routed_ref103_angry_ref207.json](results/routed_ref103_angry_ref207.json).
+
+For a resident low-idle-power profile, set `NEUTTS_POLL_BATCH=0`. It reduced observed idle server CPU from about one core to 0%, while steady backbone RTF changed from 0.837 to 0.851 (about 1.7% slower).
 
 ## Architecture
 
@@ -23,71 +47,40 @@ flowchart LR
     G --> H[24 kHz waveform]
 ```
 
-Core deployment changes:
+Deployment changes:
 
-- Speech-only output projection reduces the sampling candidates from 217,232 to 65,537.
+- Speech-only output projection reduces sampling candidates from 217,232 to 65,537.
 - Compact logits avoid materializing the unused full-vocabulary output during speech generation.
-- NeuCodec is split into RKNN-friendly stages; numerically fragile trigonometric operations and ISTFT remain on CPU.
-- Dynamic decoder shapes use 256, 320, 384 and 450 frames.
-- Emotion-aware reference routing reduces prompt-prefill cost without adding another neural model on-device.
-
-## RK3588 results
-
-OrangePi 5 Pro, RK3588, 16 GB RAM, Q4_K_M backbone, four big CPU cores fixed at 1.8 GHz, DMC/NPU performance mode, NPU `core012`.
-
-RTF includes every request's prompt prefill, autoregressive generation, RKNN decoding and CPU ISTFT. Model/process initialization is excluded.
-
-| Strategy | Mean RTF | P95 RTF | Complete | Emotional WER | DNSMOS SIG | Speaker similarity | Emotion target probability |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| `fixed207` | 0.982 | 1.008 | 15/15 | 2.63% | 4.145 | 0.874 | 0.297 |
-| `routed103_207` | **0.873** | **0.982** | **15/15** | 3.95% | **4.165** | 0.872 | **0.315** |
-
-The routed strategy reduces mean RTF by **11.1%** on the current matrix. The route was selected from only three English texts and five conditions, so it must be validated on held-out texts, seeds and speakers before being treated as a general result.
-
-For a resident low-idle-power profile, set `NEUTTS_POLL_BATCH=0`. It reduced observed idle server CPU from about one core to 0%, with steady backbone RTF changing from 0.837 to 0.851 (about 1.7% slower).
-
-## Natural-boundary 103 study
-
-The original 103-code prefix ends in a real low-energy word boundary, so it is not simply a mid-frame acoustic cut. It still ends on an incomplete linguistic/prosodic context: *“What we need, helping us to develop”*. To isolate reference length from reference content, an equal-length window `[103, 206)` was selected around *“the scope of work for a future procurement.”*
-
-Host screening used the same Q4_K_M backbone, three Angry texts, three seeds, temperature 1.0 and top-k 50. RTF is intentionally omitted because this was not measured on the RK3588.
-
-| Reference window | Codes | Mean prompt tokens | Micro WER | Samples with WER > 20% | Mean output codes | Angry probability | DNSMOS SIG / OVR |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| Prefix `[0, 103)` | 103 | 129.3 | 34.2% | 6/9 | 305.2 | **0.775** | **4.041 / 4.001** |
-| Natural `[103, 206)` | 103 | 130.3 | **6.1%** | **0/9** | 280.4 | 0.751 | 4.024 / 3.914 |
-| Stable prefix `[0, 207)` | 207 | 242.3 | 2.6% | 0/9 | 279.2 | 0.741 | 3.951 / 3.925 |
-| Re-encoded natural crop | 103 | 130.3 | **2.6%** | **0/9** | 276.9 | 0.745 | 4.070 / 4.036 |
-
-The natural 103 window removes most of the Angry intelligibility failure while preserving emotion strength and signal quality close to the 207-code reference. The additional control independently re-encodes a 2.06-second clip containing the same natural phrase; its code sequence agrees with the original `[103, 206)` slice at only 25.2%, yet it reaches the same 2.6% WER. This rules out a hidden dependence on sliced codec codes in this experiment and points to reference linguistic/prosodic completeness, rather than code count alone, as the main factor. The result remains preliminary: it covers one speaker and one emotion, and automatic boundary selection plus RK3588 validation are still pending.
-
-Same-text, same-seed examples:
-
-| Prefix 103 | Natural 103 (slice) | Natural 103 (re-encoded) | Prefix 207 |
-|---|---|---|---|
-| [listen](samples/reference_boundary/prefix103_angry.wav?raw=1) | [listen](samples/reference_boundary/natural103_angry.wav?raw=1) | [listen](samples/reference_boundary/natural103_reencoded_angry.wav?raw=1) | [listen](samples/reference_boundary/prefix207_angry.wav?raw=1) |
-
-Full host metrics are in [`results/natural_boundary_103_host.json`](results/natural_boundary_103_host.json), with the independent crop control in [`results/natural_boundary_103_reencoded_control.json`](results/natural_boundary_103_reencoded_control.json).
-
-## Audio comparison
-
-All pairs below use the same text, speaker, seed and generated speech-code sequence. The reference path is the original NeuCodec FP32 ONNX CPU decoder; the RK path uses the dynamic RKNN decoder plus CPU spectral tail.
-
-Text: *“This is a real-time board deployment test. The voice should remain clear and expressive for a complete multi-second sentence.”*
-
-| Emotion | CPU FP32 ONNX reference | RK3588 RKNN CPU+NPU |
-|---|---|---|
-| Happy | [listen](samples/cpu_onnx/happy.wav?raw=1) | [listen](samples/rk3588_rknn/happy.wav?raw=1) |
-| Sad | [listen](samples/cpu_onnx/sad.wav?raw=1) | [listen](samples/rk3588_rknn/sad.wav?raw=1) |
-| Angry | [listen](samples/cpu_onnx/angry.wav?raw=1) | [listen](samples/rk3588_rknn/angry.wav?raw=1) |
+- NeuCodec prior, twelve Transformer blocks and post-linear head run as separate RKNN stages.
+- Exp, Cos, Sin and ISTFT stay on CPU because they were numerically fragile with the tested RKNN 2.3.x toolchain.
+- Dynamic decoder shapes support 256, 320, 384 and 450 frames.
+- Per-speaker reference profiles shorten prompt prefill without adding an on-device neural model.
 
 ## Quick start
 
-### 1. Prepare the board layout
+### Requirements
+
+Board:
+
+- ARM64 Linux on RK3588; OrangePi 5 Pro 16 GB is the tested device
+- Rockchip NPU driver and RKNN Toolkit Lite2 runtime compatible with the generated models
+- Python 3.9 or newer and NumPy
+- Patched `llama-server` and its shared libraries
+
+Conversion host:
+
+- Official NeuTTS/NeuCodec implementation and downloaded checkpoints
+- PyTorch, ONNX and ONNX Runtime
+- RKNN Toolkit2 compatible with the board runtime
+
+### 1. Prepare the board
 
 ```text
 /home/orangepi/neutts_2e/
 ├── bin/llama-server
+├── configs/
+│   ├── reference_strategies.json
+│   └── emily_natural103_reencoded.json
 ├── models/neutts-2e-Q4_K_M.gguf
 ├── models_dynamic/
 │   ├── stage_prior_dynamic.rknn
@@ -95,18 +88,18 @@ Text: *“This is a real-time board deployment test. The voice should remain cle
 │   └── post_linear_dynamic.rknn
 └── scripts/
     ├── speakers.json
-    └── files from this repository's scripts/
+    └── Python and shell files from this repository's scripts/
 ```
 
-Download NeuTTS-2E Q4 weights from the [official model page](https://huggingface.co/neuphonic/neutts-2e-q4-gguf). Export `speakers.json` from the official NeuTTS assets:
+Download the Q4 weights from the [official model page](https://huggingface.co/neuphonic/neutts-2e-q4-gguf). Export the official fixed-speaker references to a torch-free JSON asset:
 
 ```bash
-python scripts/export_neutts_speakers.py \
+python3 scripts/export_neutts_speakers.py \
   --samples /path/to/neutts/neutts/refs/neutts-2e \
   --output /home/orangepi/neutts_2e/scripts/speakers.json
 ```
 
-The RKNN artifact conversion flow is documented in [docs/conversion.md](docs/conversion.md).
+Generate the RKNN artifacts by following [docs/conversion.md](docs/conversion.md), then copy `scripts/`, `configs/` and the generated model directory to the board.
 
 ### 2. Build patched llama.cpp
 
@@ -116,7 +109,7 @@ The patch targets llama.cpp commit `7acdbb1f191d869bad8c5da9d4a2121defa340af`.
 git clone https://github.com/ggml-org/llama.cpp.git
 cd llama.cpp
 git checkout 7acdbb1f191d869bad8c5da9d4a2121defa340af
-git apply /path/to/NeuTTS-2E/patches/llama.cpp-neutts-speech-only.patch
+git apply /path/to/NeuTTS-2E-rk3588/patches/llama.cpp-neutts-speech-only.patch
 cmake -B build -DGGML_NATIVE=ON -DGGML_OPENMP=ON -DLLAMA_CURL=OFF
 cmake --build build --config Release -j4 --target llama-server
 ```
@@ -131,48 +124,76 @@ NEUTTS_COMPACT_LOGITS=1 \
 bash scripts/run_neutts_2e_rk3588_server.sh
 ```
 
-Use `NEUTTS_POLL_BATCH=0` when low idle CPU usage matters more than the last ~1.7% of decode throughput.
+Use `NEUTTS_POLL_BATCH=0` when low idle CPU usage matters more than the last approximately 1.7% of backbone throughput.
 
 ### 4. Synthesize
 
+Stable mode:
+
 ```bash
-python scripts/synthesize_neutts_rk3588.py \
-  --strategy fixed207 \
+python3 scripts/synthesize_neutts_rk3588.py \
+  --strategy stable \
   --emotion sad \
   --text "The station was unusually quiet this evening." \
   --speakers /home/orangepi/neutts_2e/scripts/speakers.json \
   --model-dir /home/orangepi/neutts_2e/models_dynamic \
-  --output outputs/fixed207_sad.wav
-
-python scripts/synthesize_neutts_rk3588.py \
-  --strategy routed103_207 \
-  --emotion angry \
-  --text "The station was unusually quiet this evening." \
-  --speakers /home/orangepi/neutts_2e/scripts/speakers.json \
-  --model-dir /home/orangepi/neutts_2e/models_dynamic \
-  --output outputs/routed_angry.wav
-
-python scripts/synthesize_neutts_rk3588.py \
-  --strategy natural103 \
-  --emotion angry \
-  --text "The station was unusually quiet this evening." \
-  --speakers /home/orangepi/neutts_2e/scripts/speakers.json \
-  --model-dir /home/orangepi/neutts_2e/models_dynamic \
-  --output outputs/natural103_angry.wav
+  --output outputs/stable_sad.wav
 ```
 
-The current prefix calibration is for the bundled `emily` reference. Other speakers require their own natural-boundary prefix calibration.
+Fast mode with validation-aware fallback:
 
-## Repository contents
+```bash
+python3 scripts/synthesize_neutts_rk3588.py \
+  --strategy fast \
+  --emotion angry \
+  --text "The station was unusually quiet this evening." \
+  --speakers /home/orangepi/neutts_2e/scripts/speakers.json \
+  --model-dir /home/orangepi/neutts_2e/models_dynamic \
+  --output outputs/fast_angry.wav
+```
 
-- `scripts/synthesize_neutts_rk3588.py`: one-shot resident synthesis with all reference strategies.
+The output JSON sidecar records the selected reference, its validation status and whether a fallback occurred.
+
+## Audio comparison
+
+Each pair uses the same text, speaker, seed and generated speech-code sequence. The CPU reference uses the FP32 ONNX NeuCodec decoder; the RK path uses the dynamic RKNN decoder and CPU spectral tail.
+
+Text: *“This is a real-time board deployment test. The voice should remain clear and expressive for a complete multi-second sentence.”*
+
+| Emotion | CPU FP32 ONNX | RK3588 CPU + NPU |
+|---|---|---|
+| Happy | [listen](samples/cpu_onnx/happy.wav?raw=1) | [listen](samples/rk3588_rknn/happy.wav?raw=1) |
+| Sad | [listen](samples/cpu_onnx/sad.wav?raw=1) | [listen](samples/rk3588_rknn/sad.wav?raw=1) |
+| Angry | [listen](samples/cpu_onnx/angry.wav?raw=1) | [listen](samples/rk3588_rknn/angry.wav?raw=1) |
+
+Short-reference controls can be heard in [the reference-selection study](docs/reference-selection.md#same-text-audio-control).
+
+## Reference profiles
+
+[configs/reference_strategies.json](configs/reference_strategies.json) separates release policy from speaker assets. A release mode may use a short reference only for emotions listed in `validated_emotions`; otherwise it fails closed to its configured stable reference. Standalone `code_file` references allow independently encoded audio crops instead of slicing a longer code stream.
+
+The bundled calibration is specific to Emily. Other speakers need an exact transcript, independently encoded candidate references and their own evaluation. The selection protocol and configuration contract are documented in [docs/reference-selection.md](docs/reference-selection.md).
+
+## Repository layout
+
+- `scripts/synthesize_neutts_rk3588.py`: resident end-to-end synthesis using release or research reference modes.
 - `scripts/neucodec_rk3588_split_runtime.py`: RKNN + CPU NeuCodec runtime.
-- `scripts/benchmark_*`: resident backbone, codec and end-to-end benchmarks.
-- `scripts/export_*`, `split_neucodec_onnx.py`, `convert_neucodec_rknn.py`: export/conversion flow.
-- `patches/`: optional llama.cpp speech-only/compact-logits optimization.
-- `results/`: compact benchmark summaries.
-- `samples/`: same-token CPU-ONNX versus RKNN comparisons.
+- `scripts/benchmark_*`: backbone, codec and end-to-end measurement tools.
+- `scripts/export_*`, `split_neucodec_onnx.py`, `convert_neucodec_rknn.py`: host export and conversion flow.
+- `configs/`: versioned per-speaker reference policy and standalone research codes.
+- `patches/`: llama.cpp speech-only and compact-logits optimization.
+- `results/`: compact benchmark and study summaries.
+- `samples/`: same-token decoder comparisons and short-reference controls.
+- `tests/`: reference-window and release-fallback tests.
+
+## Limitations
+
+- Board results cover one speaker, three texts and five emotion conditions.
+- The dynamic decoder currently supports at most 450 generated codes, approximately nine seconds at 50 Hz; longer generation is rejected.
+- Reference quality is speaker-specific. A token count alone is not a safe selection rule.
+- The included complete-context 103-code result is a host-screened research control, not an RK3588 release benchmark.
+- Weights and generated model artifacts remain subject to their upstream licenses and are not included.
 
 ## License
 
-NeuTTS-derived work is distributed under the [NeuTTS Open License v1.0](LICENSE). The llama.cpp patch targets MIT-licensed upstream code; its license is included in `third_party/LICENSE-llama.cpp`. See [NOTICE](NOTICE) for attribution and commercial-use limitations.
+NeuTTS-derived work is distributed under the [NeuTTS Open License v1.0](LICENSE). The llama.cpp patch targets MIT-licensed upstream code; its license is included in [third_party/LICENSE-llama.cpp](third_party/LICENSE-llama.cpp). See [NOTICE](NOTICE) for attribution and commercial-use limitations.

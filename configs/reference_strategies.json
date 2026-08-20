@@ -1,37 +1,71 @@
 {
-  "speaker": "emily",
-  "references": {
-    "prefix103": {
-      "start": 0,
-      "codes": 103,
-      "text": "What we need, helping us to develop"
-    },
-    "boundary103": {
-      "start": 103,
-      "codes": 103,
-      "text": "the scope of work for a future procurement."
-    },
-    "prefix207": {
-      "start": 0,
-      "codes": 207,
-      "text": "What we need, helping us to develop the scope of work for a future procurement."
-    }
+  "schema_version": 2,
+  "aliases": {
+    "fixed207": "stable",
+    "routed103_207": "fast",
+    "natural103": "experimental_natural103_slice"
   },
-  "strategies": {
-    "fixed207": {
-      "default_reference": "prefix207",
-      "emotion_overrides": {}
-    },
-    "routed103_207": {
-      "default_reference": "prefix103",
-      "emotion_overrides": {
-        "angry": "prefix207"
+  "speakers": {
+    "emily": {
+      "references": {
+        "prefix207": {
+          "source": "speaker_codes",
+          "start": 0,
+          "count": 207,
+          "text": "What we need, helping us to develop the scope of work for a future procurement.",
+          "release_eligible": true,
+          "validated_emotions": ["neutral", "happy", "sad", "angry", "surprised"],
+          "validation_status": "RK3588 board-evaluated"
+        },
+        "prefix103": {
+          "source": "speaker_codes",
+          "start": 0,
+          "count": 103,
+          "text": "What we need, helping us to develop",
+          "release_eligible": true,
+          "validated_emotions": ["neutral", "happy", "sad", "surprised"],
+          "validation_status": "RK3588 board-evaluated for listed emotions"
+        },
+        "natural103_slice": {
+          "source": "speaker_codes",
+          "start": 103,
+          "count": 103,
+          "text": "the scope of work for a future procurement.",
+          "release_eligible": false,
+          "validated_emotions": ["angry"],
+          "validation_status": "host-screened research control"
+        },
+        "natural103_reencoded": {
+          "source": "code_file",
+          "path": "emily_natural103_reencoded.json",
+          "start": 0,
+          "count": 103,
+          "text": "the scope of work for a future procurement.",
+          "release_eligible": false,
+          "validated_emotions": ["angry"],
+          "validation_status": "host-screened research control; RK3588 pending"
+        }
+      },
+      "modes": {
+        "stable": {
+          "default_reference": "prefix207",
+          "release_status": "stable"
+        },
+        "fast": {
+          "default_reference": "prefix103",
+          "fallback_reference": "prefix207",
+          "require_release_eligible": true,
+          "release_status": "board-evaluated"
+        },
+        "experimental_natural103_slice": {
+          "default_reference": "natural103_slice",
+          "release_status": "experimental"
+        },
+        "experimental_reencoded103": {
+          "default_reference": "natural103_reencoded",
+          "release_status": "experimental"
+        }
       }
-    },
-    "natural103": {
-      "default_reference": "boundary103",
-      "emotion_overrides": {},
-      "validation_status": "host-screened for Angry; RK3588 validation pending"
     }
   }
 }
