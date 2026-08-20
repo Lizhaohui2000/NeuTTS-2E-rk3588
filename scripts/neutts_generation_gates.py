@@ -43,8 +43,19 @@ def generation_status(
     if not sidecar.exists():
         return None
     report = json.loads(sidecar.read_text(encoding="utf-8"))
+    runs = report.get("per_run") if isinstance(report, dict) else None
+    if (
+        not isinstance(runs, list)
+        or not runs
+        or not isinstance(runs[0], dict)
+        or "speech_tokens" not in runs[0]
+        or "predict" not in report
+    ):
+        # Decoder sidecars can contain audio metadata without a generation
+        # report. Such metadata carries no completeness gate.
+        return None
     return classify_generation_status(
-        int(report["per_run"][0]["speech_tokens"]),
+        int(runs[0]["speech_tokens"]),
         int(report["predict"]),
         word_count(reference_text),
         min_speech_tokens_per_word,

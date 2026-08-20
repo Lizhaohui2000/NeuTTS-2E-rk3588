@@ -57,16 +57,17 @@ Host screening used the same Q4_K_M backbone, three Angry texts, three seeds, te
 | Prefix `[0, 103)` | 103 | 129.3 | 34.2% | 6/9 | 305.2 | **0.775** | **4.041 / 4.001** |
 | Natural `[103, 206)` | 103 | 130.3 | **6.1%** | **0/9** | 280.4 | 0.751 | 4.024 / 3.914 |
 | Stable prefix `[0, 207)` | 207 | 242.3 | 2.6% | 0/9 | 279.2 | 0.741 | 3.951 / 3.925 |
+| Re-encoded natural crop | 103 | 130.3 | **2.6%** | **0/9** | 276.9 | 0.745 | 4.070 / 4.036 |
 
-The natural 103 window removes most of the Angry intelligibility failure while preserving emotion strength and signal quality close to the 207-code reference. This indicates that reference-context completeness is a stronger explanation than short length alone. The result is still preliminary: it covers one speaker and one emotion, and the shifted code window must be retested on the board and against a cropped-audio re-encode control.
+The natural 103 window removes most of the Angry intelligibility failure while preserving emotion strength and signal quality close to the 207-code reference. The additional control independently re-encodes a 2.06-second clip containing the same natural phrase; its code sequence agrees with the original `[103, 206)` slice at only 25.2%, yet it reaches the same 2.6% WER. This rules out a hidden dependence on sliced codec codes in this experiment and points to reference linguistic/prosodic completeness, rather than code count alone, as the main factor. The result remains preliminary: it covers one speaker and one emotion, and automatic boundary selection plus RK3588 validation are still pending.
 
 Same-text, same-seed examples:
 
-| Prefix 103 | Natural 103 | Prefix 207 |
-|---|---|---|
-| [listen](samples/reference_boundary/prefix103_angry.wav?raw=1) | [listen](samples/reference_boundary/natural103_angry.wav?raw=1) | [listen](samples/reference_boundary/prefix207_angry.wav?raw=1) |
+| Prefix 103 | Natural 103 (slice) | Natural 103 (re-encoded) | Prefix 207 |
+|---|---|---|---|
+| [listen](samples/reference_boundary/prefix103_angry.wav?raw=1) | [listen](samples/reference_boundary/natural103_angry.wav?raw=1) | [listen](samples/reference_boundary/natural103_reencoded_angry.wav?raw=1) | [listen](samples/reference_boundary/prefix207_angry.wav?raw=1) |
 
-Full host metrics are in [`results/natural_boundary_103_host.json`](results/natural_boundary_103_host.json).
+Full host metrics are in [`results/natural_boundary_103_host.json`](results/natural_boundary_103_host.json), with the independent crop control in [`results/natural_boundary_103_reencoded_control.json`](results/natural_boundary_103_reencoded_control.json).
 
 ## Audio comparison
 

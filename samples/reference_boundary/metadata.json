@@ -19,6 +19,11 @@
     "prefix207_angry.wav": {
       "reference_window": [0, 207],
       "whisper_wer": 0.07692307692307693
+    },
+    "natural103_reencoded_angry.wav": {
+      "reference_window": [0, 103],
+      "reference_source": "Emily audio crop 2.06-4.12 s, independently NeuCodec encoded",
+      "whisper_wer": 0.07692307692307693
     }
   }
 }

@@ -2,6 +2,7 @@
   "protocol": "neutts-natural-boundary-103-host-screen-v1",
   "date": "2026-08-20",
   "model": "NeuTTS-2E Q4_K_M GGUF backbone plus FP32 ONNX NeuCodec",
+  "independent_reencoded_control": "results/natural_boundary_103_reencoded_control.json",
   "scope": {
     "speaker": "emily",
     "emotion": "angry",
@@ -66,7 +67,7 @@
   "limitations": [
     "This is a host screening experiment, not an RK3588 RTF measurement.",
     "Only one speaker, one emotion, three texts and three seeds were tested.",
-    "The natural103 window is a slice of the original encoded sequence; cropped-audio re-encoding remains a useful follow-up control.",
+    "The natural103 window is a slice of the original encoded sequence; an independently re-encoded cropped-audio control is reported separately.",
     "Tempo-normalized Emotion2Vec was excluded because small phase-vocoder stretches caused large classifier shifts on this matrix."
   ]
 }

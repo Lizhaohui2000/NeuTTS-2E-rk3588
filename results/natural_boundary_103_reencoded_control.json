@@ -1,0 +1,56 @@
+{
+  "protocol": "neutts-natural-boundary-103-cropped-audio-control-v1",
+  "date": "2026-08-20",
+  "model": "NeuTTS-2E Q4_K_M GGUF backbone plus FP32 ONNX NeuCodec",
+  "scope": {
+    "speaker": "emily",
+    "emotion": "angry",
+    "texts": 3,
+    "seeds": [42, 123, 2026],
+    "samples_per_condition": 9,
+    "temperature": 1.0,
+    "top_k": 50,
+    "generation_limit": 450
+  },
+  "reference": {
+    "source_audio": "third_party/NeuTTS/samples/emily.wav",
+    "crop_seconds": [2.06, 4.12],
+    "crop_duration_seconds": 2.06,
+    "reference_text": "the scope of work for a future procurement.",
+    "encoded_codes": 103,
+    "position_agreement_with_original_slice": 0.2524271844660194,
+    "note": "The crop was independently encoded by NeuCodec; it is not the original code slice [103, 206)."
+  },
+  "condition": {
+    "name": "reencoded_natural103",
+    "reference_code_start": 0,
+    "reference_code_end": 103,
+    "reference_codes": 103,
+    "mean_prompt_tokens": 130.33333333333334,
+    "mean_output_codes": 276.8888888888889,
+    "output_codes_min_median_max": [249, 280, 290],
+    "generation_limit_failures": 0,
+    "micro_wer": 0.02631578947368421,
+    "samples_above_20_percent_wer": 0,
+    "mean_duration_seconds": 5.537777777777778,
+    "emotion2vec_angry_probability": 0.7451239909082992,
+    "emotion2vec_angry_accuracy": 0.7777777777777778,
+    "tempo_normalized_angry_probability": 0.28400658490264324,
+    "dnsmos_sig": 4.070387663958041,
+    "dnsmos_overall": 4.036090760527326
+  },
+  "comparison": {
+    "prefix103_micro_wer": 0.34210526315789475,
+    "sliced_natural103_micro_wer": 0.06140350877192982,
+    "prefix207_micro_wer": 0.02631578947368421,
+    "prefix103_angry_probability": 0.7750530642117236,
+    "sliced_natural103_angry_probability": 0.7505181111982746,
+    "prefix207_angry_probability": 0.7410058992845342
+  },
+  "interpretation": "An independently encoded 103-token crop matches the 207-token reference on content WER and retains comparable Angry probability and DNSMOS. The old prefix103 failure is therefore best attributed to incomplete linguistic/prosodic reference context, not to Angry requiring 207 tokens or to a hidden dependence on sliced codec codes.",
+  "limitations": [
+    "One speaker, one emotion, three texts and three seeds.",
+    "The 2.06-second crop was selected from a known natural phrase boundary; automatic boundary selection is not evaluated here.",
+    "The tempo-normalized Emotion2Vec score is reported for traceability but is not used as a primary conclusion because phase-vocoder normalization is unstable for this classifier."
+  ]
+}
