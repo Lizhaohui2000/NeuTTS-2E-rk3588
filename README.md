@@ -1,10 +1,47 @@
-# NeuTTS-2E RK3588
+# NeuTTS-2E RK3588: Real-time expressive TTS on CPU + NPU
 
-Unofficial CPU + NPU deployment of [NeuTTS-2E](https://github.com/neuphonic/neutts) on Rockchip RK3588.
+Unofficial deployment of [NeuTTS-2E](https://github.com/neuphonic/neutts) for real-time, emotionally expressive speech synthesis on Rockchip RK3588.
 
-The Q4_K_M autoregressive backbone runs on four RK3588 big CPU cores. NeuCodec is split into RKNN-friendly stages for the NPU, while numerically sensitive spectral operations remain on the CPU. The measured resident pipeline reaches real time without changing or fine-tuning the original TTS model.
+NeuTTS-2E combines two properties that are rarely available together in an edge TTS system: emotion is a native input to the speech language model, and the model is compact enough to run as a Q4 autoregressive backbone plus a neural codec. This project maps that design onto the RK3588 CPU and NPU and reaches a measured resident RTF below 1.0 without fine-tuning the original model.
+
+| Core capability | How it is achieved | Measured status |
+|---|---|---|
+| Native emotion control | One emotion token conditions the same text-to-speech-code generation pass | Five emotions board-calibrated for the bundled Emily profile |
+| Low-overhead emotion injection | No separate emotion encoder, per-emotion adapter, acoustic post-processing or second inference pass | Changing emotion does not change the runtime graph or checkpoint |
+| Real-time edge synthesis | Q4_K_M backbone on four big CPU cores; NeuCodec Transformer stages on the NPU | Current Angry fast-v2 mean/P95 RTF: **0.858 / 0.874** |
+| Preserved expressive generation | The original NeuTTS-2E weights and native emotion mechanism are retained | No model fine-tuning or emotion-specific weights |
 
 > This is an independent research adaptation, not an official Neuphonic release. Model weights, ONNX graphs and generated RKNN binaries are not redistributed.
+
+## Why NeuTTS-2E for emotional edge TTS?
+
+NeuTTS-2E is an autoregressive speech-code language model rather than a conventional duration predictor plus mel-spectrogram decoder. Its prompt jointly contains the reference transcript, a categorical emotion token, the target text and reference speech codes:
+
+```text
+reference text + <|ANGRY|> + target text + reference speech codes
+                                      |
+                                      v
+                            50 Hz target speech codes
+                                      |
+                                      v
+                              NeuCodec waveform
+```
+
+The emotion token changes the model's speech-code distribution directly. Emotion is therefore generated together with timing, pitch, energy and voice characteristics instead of being added afterward by changing speed or pitch. The runtime accepts Neutral, Happy, Sad, Angry, Fearful, Disgusted and Surprised; this repository currently claims board calibration only for Neutral, Happy, Sad, Angry and Surprised.
+
+Compared with a common emotion retrofit for a neutral TTS model:
+
+| Property | Common retrofit | NeuTTS-2E in this project |
+|---|---|---|
+| Emotion input | Added style encoder, embedding network, adapter or signal-level control | Native emotion token already learned by the backbone |
+| Inference cost | May add an encoder, conditioning network or post-processing stage | One extra prompt token; the generation and codec path stay unchanged |
+| Emotion checkpoint | Often emotion- or dataset-specific fine-tuning | One unchanged Q4_K_M checkpoint for all supported emotion tokens |
+| Acoustic representation | Frame-level mel prediction is common | Compact 50 Hz discrete speech codes |
+| RK3588 execution | A monolithic graph may fit neither CPU nor NPU well | Autoregressive backbone on CPU, parallel codec blocks on NPU |
+
+The upstream model supplies the speech-code language model, native emotion tokens and NeuCodec. This repository contributes the speech-only/compact-logits `llama.cpp` path, RKNN codec partition, dynamic decoder shapes, resident runtime, and complete-context short-reference policy. The short reference reduces prompt prefill cost; it does not replace or simulate the model's native emotion control.
+
+Same-text, same-speaker RK3588 examples: [Happy](samples/rk3588_rknn/happy.wav?raw=1) · [Sad](samples/rk3588_rknn/sad.wav?raw=1) · [Angry](samples/rk3588_rknn/angry.wav?raw=1)
 
 ## Release modes
 
@@ -40,7 +77,7 @@ For a resident low-idle-power profile, set `NEUTTS_POLL_BATCH=0`. It reduced obs
 
 ```mermaid
 flowchart LR
-    A[Text + emotion] --> B[NeuTTS-2E Q4_K_M<br/>llama.cpp on 4 CPU big cores]
+    A[Reference text + target text<br/>native emotion token + reference codes] --> B[NeuTTS-2E Q4_K_M<br/>llama.cpp on 4 CPU big cores]
     B --> C[50 Hz speech codes]
     C --> D[FSQ decode<br/>CPU]
     D --> E[Prior + 12 Transformer blocks<br/>RKNN NPU core012]
