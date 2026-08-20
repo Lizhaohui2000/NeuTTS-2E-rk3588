@@ -13,11 +13,11 @@ Only the following modes are release paths:
 | Mode | Reference policy | Status |
 |---|---|---|
 | `stable` | 207 codes for every emotion | Stable quality default |
-| `fast` | 103 codes where board-validated; automatic 207-code fallback otherwise | Board-evaluated low-RTF mode |
+| `fast` / `fast-v2` | 103 codes for all five calibrated emotions; automatic 207-code fallback otherwise | Board-evaluated low-RTF mode |
 
-For the bundled Emily profile, `fast` uses 103 codes for Neutral, Happy, Sad and Surprised. Angry falls back to 207 because the original 103-code prefix was not reliable for that condition. Other supported but uncalibrated emotions also fall back to `stable`; the published board matrix covers only the five listed conditions.
+For the bundled Emily profile, `fast-v2` uses the 103-code prefix for Neutral, Happy, Sad and Surprised, and the independently re-encoded complete-context 103-code reference for Angry. Other supported but uncalibrated emotions still fall back to `stable`; `all-103` therefore means all five board-calibrated conditions, not every emotion or speaker.
 
-The legacy names `fixed207` and `routed103_207` remain accepted as aliases for `stable` and `fast`. Research-only short-reference controls are documented in [the complete-context reference study](docs/reference-selection.md); they are not release defaults.
+The legacy names `fixed207` and `routed103_207` remain accepted as aliases for `stable` and `fast`; `fast-v2` selects the current `fast` policy. Research-only short-reference controls are documented in [the complete-context reference study](docs/reference-selection.md).
 
 ## RK3588 results
 
@@ -28,9 +28,11 @@ RTF includes prompt prefill, autoregressive generation, RKNN decoding and CPU IS
 | Mode | Mean RTF | P95 RTF | Complete | Emotional WER | DNSMOS SIG | Speaker similarity | Emotion target probability |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | `stable` | 0.982 | 1.008 | 15/15 | 2.63% | 4.145 | 0.874 | 0.297 |
-| `fast` | **0.873** | **0.982** | **15/15** | 3.95% | **4.165** | 0.872 | **0.315** |
+| `fast-v1` (archived) | **0.873** | **0.982** | **15/15** | 3.95% | **4.165** | 0.872 | **0.315** |
 
-`fast` reduced mean RTF by **11.1%** on this matrix. The matrix contains three English texts and five emotion conditions, so these numbers should not be interpreted as a multi-speaker or large-corpus result. Raw summaries are in [results/benchmark_summary.json](results/benchmark_summary.json) and [results/routed_ref103_angry_ref207.json](results/routed_ref103_angry_ref207.json).
+The archived `fast-v1` policy used 103 codes for four conditions and 207 for Angry; it reduced mean RTF by **11.1%** on this matrix. The matrix contains three English texts and five emotion conditions, so these numbers should not be interpreted as a multi-speaker or large-corpus result. Raw summaries are in [results/benchmark_summary.json](results/benchmark_summary.json) and [results/routed_ref103_angry_ref207.json](results/routed_ref103_angry_ref207.json).
+
+The subsequent Angry release gate compared re-encoded natural-103 with 207 over three texts and three seeds. Natural-103 completed 9/9 generations, kept the WER increase within 2 percentage points, and improved DNSMOS SIG and Angry target probability. Under the optimized fixed-1.8-GHz resident service, its mean/P95 RTF was **0.858/0.874**, versus **1.006/1.024** for 207. See [results/natural103_angry_rk3588.json](results/natural103_angry_rk3588.json).
 
 For a resident low-idle-power profile, set `NEUTTS_POLL_BATCH=0`. It reduced observed idle server CPU from about one core to 0%, while steady backbone RTF changed from 0.837 to 0.851 (about 1.7% slower).
 
@@ -144,12 +146,12 @@ Fast mode with validation-aware fallback:
 
 ```bash
 python3 scripts/synthesize_neutts_rk3588.py \
-  --strategy fast \
+  --strategy fast-v2 \
   --emotion angry \
   --text "The station was unusually quiet this evening." \
   --speakers /home/orangepi/neutts_2e/scripts/speakers.json \
   --model-dir /home/orangepi/neutts_2e/models_dynamic \
-  --output outputs/fast_angry.wav
+  --output outputs/fast_v2_angry.wav
 ```
 
 The output JSON sidecar records the selected reference, its validation status and whether a fallback occurred.
@@ -172,7 +174,7 @@ Short-reference controls can be heard in [the reference-selection study](docs/re
 
 [configs/reference_strategies.json](configs/reference_strategies.json) separates release policy from speaker assets. A release mode may use a short reference only for emotions listed in `validated_emotions`; otherwise it fails closed to its configured stable reference. Standalone `code_file` references allow independently encoded audio crops instead of slicing a longer code stream.
 
-The bundled calibration is specific to Emily. Other speakers need an exact transcript, independently encoded candidate references and their own evaluation. The selection protocol and configuration contract are documented in [docs/reference-selection.md](docs/reference-selection.md).
+The bundled calibration is specific to Emily. Other speakers need an exact transcript, independently encoded candidate references and their own evaluation. The offline [reference-budget search tool](scripts/search_reference_budget.py) enumerates low-energy 80–103-code windows, checks complete linguistic context with Whisper, and independently encodes accepted crops. The selection protocol, command and configuration contract are documented in [docs/reference-selection.md](docs/reference-selection.md).
 
 ## Repository layout
 
@@ -191,7 +193,7 @@ The bundled calibration is specific to Emily. Other speakers need an exact trans
 - Board results cover one speaker, three texts and five emotion conditions.
 - The dynamic decoder currently supports at most 450 generated codes, approximately nine seconds at 50 Hz; longer generation is rejected.
 - Reference quality is speaker-specific. A token count alone is not a safe selection rule.
-- The included complete-context 103-code result is a host-screened research control, not an RK3588 release benchmark.
+- The complete-context 103-code result is board-validated only for Emily Angry; it is not a speaker-independent reference rule.
 - Weights and generated model artifacts remain subject to their upstream licenses and are not included.
 
 ## License

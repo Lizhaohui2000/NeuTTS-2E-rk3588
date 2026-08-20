@@ -3,6 +3,7 @@
   "aliases": {
     "fixed207": "stable",
     "routed103_207": "fast",
+    "fast-v2": "fast",
     "natural103": "experimental_natural103_slice"
   },
   "speakers": {
@@ -41,9 +42,9 @@
           "start": 0,
           "count": 103,
           "text": "the scope of work for a future procurement.",
-          "release_eligible": false,
+          "release_eligible": true,
           "validated_emotions": ["angry"],
-          "validation_status": "host-screened research control; RK3588 pending"
+          "validation_status": "RK3588 board-evaluated for Angry"
         }
       },
       "modes": {
@@ -53,6 +54,9 @@
         },
         "fast": {
           "default_reference": "prefix103",
+          "emotion_overrides": {
+            "angry": "natural103_reencoded"
+          },
           "fallback_reference": "prefix207",
           "require_release_eligible": true,
           "release_status": "board-evaluated"

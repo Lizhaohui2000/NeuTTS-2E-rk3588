@@ -1,0 +1,63 @@
+{
+  "protocol": "natural103-angry-rk3588-release-gate-v1",
+  "date": "2026-08-20",
+  "board": "RK3588",
+  "scope": {
+    "speaker": "Emily",
+    "emotion": "Angry",
+    "texts": 3,
+    "seeds_per_text": 3,
+    "samples_per_reference": 9
+  },
+  "references": {
+    "natural103_reencoded": {
+      "codes": 103,
+      "generation_completion": 1.0,
+      "wer": 0.05263157894736842,
+      "dnsmos_sig": 4.071683892000192,
+      "mean_source_speaker_similarity": 0.7750300916490597,
+      "worst_source_speaker_similarity": 0.70755001396537,
+      "angry_probability": 0.8179
+    },
+    "prefix207": {
+      "codes": 207,
+      "generation_completion": 1.0,
+      "wer": 0.03508771929824561,
+      "dnsmos_sig": 3.9637,
+      "mean_source_speaker_similarity": 0.7747404561155297,
+      "worst_source_speaker_similarity": 0.7258837059666935,
+      "angry_probability": 0.7737
+    }
+  },
+  "natural103_minus_prefix207": {
+    "wer_percentage_points": 1.754385964912281,
+    "dnsmos_sig": 0.107983892000192,
+    "mean_source_speaker_similarity": 0.00028963553353,
+    "worst_source_speaker_similarity": -0.0183336920013235,
+    "angry_probability": 0.0442
+  },
+  "resident_runtime": {
+    "conditions": "fixed 1.8 GHz big cores, compact-logits server, NEUTTS_POLL_BATCH=0, 2 warmups plus 10 measured runs",
+    "natural103_reencoded": {
+      "mean_rtf": 0.857844706031746,
+      "p95_rtf": 0.8744806773489624
+    },
+    "prefix207": {
+      "mean_rtf": 1.0063292171667775,
+      "p95_rtf": 1.0235281004978818
+    },
+    "natural103_reduction_percent": {
+      "mean_rtf": 14.75506311474,
+      "p95_rtf": 14.562123216394
+    }
+  },
+  "release_gates": {
+    "maximum_wer_increase_percentage_points": 2.0,
+    "maximum_dnsmos_sig_loss": 0.1,
+    "maximum_speaker_similarity_loss": 0.02,
+    "require_no_angry_probability_loss": true,
+    "require_all_generations_complete": true
+  },
+  "decision": "pass",
+  "release_policy": "Use natural103_reencoded for Emily Angry in fast-v2. Keep the 207-code fallback for emotions without board validation."
+}

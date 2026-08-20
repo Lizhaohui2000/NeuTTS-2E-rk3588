@@ -1,0 +1,89 @@
+{
+  "protocol": "neutts-complete-context-budget-search-v1",
+  "date": "2026-08-20",
+  "scope": {
+    "speaker": "Emily",
+    "emotion": "Angry",
+    "code_budget": [80, 103],
+    "held_out_texts": 3,
+    "seeds_per_text": 3
+  },
+  "pipeline": [
+    "enumerate low-energy boundary pairs inside the code budget",
+    "match Whisper output to a continuous source-transcript span",
+    "reject incomplete phrases and independently NeuCodec-encode each crop",
+    "screen held-out generations for completion, WER, quality, speaker similarity and target emotion"
+  ],
+  "screened_candidates": [
+    {
+      "codes": 82,
+      "wer": 0.0351,
+      "dnsmos_sig": 4.115,
+      "mean_source_speaker_similarity": 0.775,
+      "angry_probability": 0.858,
+      "classification": "aggressive research candidate"
+    },
+    {
+      "codes": 83,
+      "wer": 0.5965,
+      "dnsmos_sig": 3.995,
+      "mean_source_speaker_similarity": 0.775,
+      "angry_probability": 0.653,
+      "classification": "rejected"
+    },
+    {
+      "codes": 90,
+      "wer": 0.0263,
+      "dnsmos_sig": 4.063,
+      "mean_source_speaker_similarity": 0.782,
+      "angry_probability": 0.782,
+      "classification": "balanced research candidate"
+    },
+    {
+      "codes": 99,
+      "wer": 0.0263,
+      "dnsmos_sig": 4.068,
+      "mean_source_speaker_similarity": 0.777,
+      "angry_probability": 0.819,
+      "classification": "usable research candidate"
+    },
+    {
+      "codes": 101,
+      "wer": 0.0263,
+      "dnsmos_sig": 4.096,
+      "mean_source_speaker_similarity": 0.768,
+      "angry_probability": 0.824,
+      "classification": "usable research candidate"
+    },
+    {
+      "codes": 103,
+      "id": "natural103_reencoded",
+      "wer": 0.0263,
+      "dnsmos_sig": 4.074,
+      "mean_source_speaker_similarity": 0.778,
+      "angry_probability": 0.778,
+      "classification": "release candidate"
+    },
+    {
+      "codes": 207,
+      "id": "prefix207",
+      "wer": 0.0351,
+      "dnsmos_sig": 4.060,
+      "mean_source_speaker_similarity": 0.777,
+      "angry_probability": 0.791,
+      "classification": "stable baseline"
+    }
+  ],
+  "rk3588_resident_runtime_screen": {
+    "conditions": "fixed 1.8 GHz big cores, compact-logits server, NEUTTS_POLL_BATCH=0, 2 warmups plus 10 measured runs",
+    "candidates": [
+      {"codes": 82, "mean_rtf": 0.8630583556710112, "p95_rtf": 0.8887104043962403},
+      {"codes": 90, "mean_rtf": 0.8567951303579051, "p95_rtf": 0.8661756221186401},
+      {"codes": 103, "mean_rtf": 0.857844706031746, "p95_rtf": 0.8744806773489624},
+      {"codes": 207, "mean_rtf": 1.0063292171667775, "p95_rtf": 1.0235281004978818}
+    ],
+    "interpretation": "For this utterance, 82 and 90 codes did not improve end-to-end RTF over 103 enough to justify a less validated release reference."
+  },
+  "decision": "Promote natural103_reencoded only after its separate RK3588 quality gate. Keep 82 and 90 codes experimental until the same board gate is run.",
+  "warning": "This is a one-speaker screen. A code count is not a speaker-independent reference rule."
+}

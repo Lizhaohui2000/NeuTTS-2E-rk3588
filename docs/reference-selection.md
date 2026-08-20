@@ -33,7 +33,7 @@ Four references were compared:
 
 The independently encoded crop agrees position-by-position with the sliced sequence at only 25.2%, yet matches the 207-code reference WER. In this experiment, the original Angry failure is therefore best explained by incomplete linguistic/prosodic reference context rather than by a requirement for 207 codes or dependence on a special token slice.
 
-This is a limited result, not a universal claim. It contains one speaker, one emotion, three texts and three seeds. It does not establish a universal duration, prove that every complete clause works, or provide a multi-speaker RK3588 RTF result.
+This is a limited result, not a universal claim. It contains one speaker, one emotion, three texts and three seeds. It does not establish a universal duration, prove that every complete clause works, or provide a multi-speaker result.
 
 Raw metrics are available in [natural_boundary_103_host.json](../results/natural_boundary_103_host.json) and [natural_boundary_103_reencoded_control.json](../results/natural_boundary_103_reencoded_control.json).
 
@@ -45,17 +45,43 @@ Text, speaker and seed are identical across these examples.
 |---|---|---|---|
 | [listen](../samples/reference_boundary/prefix103_angry.wav?raw=1) | [listen](../samples/reference_boundary/natural103_angry.wav?raw=1) | [listen](../samples/reference_boundary/natural103_reencoded_angry.wav?raw=1) | [listen](../samples/reference_boundary/prefix207_angry.wav?raw=1) |
 
-## Release decision
+## RK3588 release gate
 
-The experiment changes the mechanism used by the release without promoting an unverified result to the default:
+The independently re-encoded crop was subsequently evaluated on RK3588 against the stable 207-code reference using three texts and three seeds:
+
+| Reference | Complete | WER | DNSMOS SIG | Mean / worst source-speaker similarity | Angry probability | Mean / P95 resident RTF |
+|---|---:|---:|---:|---:|---:|---:|
+| Natural re-encoded 103 | 9/9 | 5.26% | **4.072** | 0.775 / 0.708 | **0.818** | **0.858 / 0.874** |
+| Stable 207 | 9/9 | **3.51%** | 3.964 | 0.775 / 0.726 | 0.774 | 1.006 / 1.024 |
+
+The 1.75-percentage-point WER increase and 0.018 worst-similarity loss remain inside the predefined 2-point and 0.02 gates; SIG and Angry probability improve. Runtime used fixed 1.8 GHz big cores, compact logits, `NEUTTS_POLL_BATCH=0`, two warmups and ten measured resident runs. The 103-code condition reduced mean RTF by 14.8%.
+
+This changes the release policy:
 
 - `stable` always selects the 207-code reference.
-- `fast` selects its configured short reference when it is marked `release_eligible` for the requested emotion.
+- `fast` and its `fast-v2` alias use 103 codes for all five calibrated Emily emotions.
+- Angry selects the independently encoded complete-context reference; the other four use the original 103-code prefix.
 - If the short reference is not validated for that emotion, `fast` automatically falls back to the stable reference.
 - `experimental_natural103_slice` reproduces the sliced control.
 - `experimental_reencoded103` loads the independently encoded codes from [emily_natural103_reencoded.json](../configs/emily_natural103_reencoded.json).
 
-The old names remain CLI aliases, but `natural103` deliberately maps to the sliced experimental control. This avoids claiming that the slice and independent re-encoding are the same condition.
+Fearful and Disgusted remain uncalibrated and therefore still fall back to 207. The old names remain CLI aliases, but `natural103` deliberately maps to the sliced experimental control. This avoids claiming that the slice and independent re-encoding are the same condition. Compact board metrics are in [natural103_angry_rk3588.json](../results/natural103_angry_rk3588.json).
+
+## Automatic 80–103-code search
+
+`scripts/search_reference_budget.py` compiles candidates offline. It detects separated local RMS minima, enumerates endpoint pairs inside the requested code budget, transcribes each crop with Whisper, maps that transcript to a continuous span of the known source text, rejects incomplete phrases, then independently NeuCodec-encodes the remaining crops.
+
+```bash
+python3 scripts/search_reference_budget.py \
+  --audio /path/to/reference.wav \
+  --source-text "The exact transcript of the full reference recording." \
+  --whisper-model /path/to/whisper-small \
+  --min-codes 80 --max-codes 103 \
+  --max-per-code-count 2 \
+  --output-dir outputs/reference-budget
+```
+
+The Emily screen found 90 codes to be the most balanced research candidate and 82 codes to be an aggressive candidate. An adjacent 83-code candidate failed badly (59.65% WER), which is direct evidence that duration alone is not a valid selection rule. In the fixed-frequency board runtime screen, 82/90/103 mean RTF values were 0.863/0.857/0.858, so going below 103 did not yield a meaningful end-to-end gain for that utterance. Neither 82 nor 90 is promoted to the release default until it passes the same full board quality gate. Compact search results are in [reference_budget_search.json](../results/reference_budget_search.json).
 
 ## Profile contract
 

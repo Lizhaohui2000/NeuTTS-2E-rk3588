@@ -33,9 +33,9 @@ def test_fast_falls_back_only_for_unvalidated_emotion():
         assert reference["reference_id"] == "prefix103"
         assert reference["fallback_used"] is False
     angry = select_reference("fast", "emily", "angry", CONFIG)
-    assert angry["reference_id"] == "prefix207"
-    assert angry["fallback_used"] is True
-    assert "not release-validated" in angry["fallback_reason"]
+    assert angry["reference_id"] == "natural103_reencoded"
+    assert angry["reference_codes"] == 103
+    assert angry["fallback_used"] is False
 
     for emotion in ("fearful", "disgusted"):
         reference = select_reference("fast", "emily", emotion, CONFIG)
@@ -46,6 +46,7 @@ def test_fast_falls_back_only_for_unvalidated_emotion():
 def test_legacy_strategy_names_remain_compatible():
     assert select_reference("fixed207", "emily", "happy", CONFIG)["strategy"] == "stable"
     assert select_reference("routed103_207", "emily", "happy", CONFIG)["strategy"] == "fast"
+    assert select_reference("fast-v2", "emily", "angry", CONFIG)["strategy"] == "fast"
     assert (
         select_reference("natural103", "emily", "angry", CONFIG)["strategy"]
         == "experimental_natural103_slice"
