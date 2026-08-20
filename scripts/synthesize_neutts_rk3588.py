@@ -27,7 +27,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--speaker", default="emily")
     parser.add_argument(
         "--strategy",
-        choices=("fixed207", "routed103_207"),
+        choices=("fixed207", "routed103_207", "natural103"),
         default="fixed207",
     )
     parser.add_argument("--emotion", choices=EMOTIONS, required=True)
@@ -57,13 +57,14 @@ def main() -> None:
     if args.speaker not in speakers:
         raise ValueError(f"speaker {args.speaker!r} is absent from {args.speakers}")
     stored_codes = speakers[args.speaker]["codes"]
-    reference_count = int(strategy["reference_codes"])
-    if len(stored_codes) < reference_count:
+    reference_start = int(strategy["reference_code_start"])
+    reference_end = int(strategy["reference_code_end"])
+    if len(stored_codes) < reference_end:
         raise ValueError(
-            f"speaker reference has {len(stored_codes)} codes, needs {reference_count}"
+            f"speaker reference has {len(stored_codes)} codes, needs index {reference_end}"
         )
     reference_tokens = "".join(
-        f"<|speech_{code}|>" for code in stored_codes[:reference_count]
+        f"<|speech_{code}|>" for code in stored_codes[reference_start:reference_end]
     )
     prompt = (
         f"<|TEXT_PROMPT_START|>{strategy['reference_text']}"

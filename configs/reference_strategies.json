@@ -1,19 +1,37 @@
 {
   "speaker": "emily",
-  "prefixes": {
-    "103": "What we need, helping us to develop",
-    "207": "What we need, helping us to develop the scope of work for a future procurement."
+  "references": {
+    "prefix103": {
+      "start": 0,
+      "codes": 103,
+      "text": "What we need, helping us to develop"
+    },
+    "boundary103": {
+      "start": 103,
+      "codes": 103,
+      "text": "the scope of work for a future procurement."
+    },
+    "prefix207": {
+      "start": 0,
+      "codes": 207,
+      "text": "What we need, helping us to develop the scope of work for a future procurement."
+    }
   },
   "strategies": {
     "fixed207": {
-      "default_reference_codes": 207,
+      "default_reference": "prefix207",
       "emotion_overrides": {}
     },
     "routed103_207": {
-      "default_reference_codes": 103,
+      "default_reference": "prefix103",
       "emotion_overrides": {
-        "angry": 207
+        "angry": "prefix207"
       }
+    },
+    "natural103": {
+      "default_reference": "boundary103",
+      "emotion_overrides": {},
+      "validation_status": "host-screened for Angry; RK3588 validation pending"
     }
   }
 }

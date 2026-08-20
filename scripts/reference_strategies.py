@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reference-prefix selection for the evaluated NeuTTS-2E strategies."""
+"""Reference-window selection for the evaluated NeuTTS-2E strategies."""
 
 from __future__ import annotations
 
@@ -30,18 +30,24 @@ def select_reference(
     if strategy not in strategies:
         raise ValueError(f"unknown strategy {strategy!r}; choose from {sorted(strategies)}")
     profile = strategies[strategy]
-    code_count = int(
-        profile["emotion_overrides"].get(
-            emotion.lower(), profile["default_reference_codes"]
-        )
+    reference_id = str(
+        profile["emotion_overrides"].get(emotion.lower(), profile["default_reference"])
     )
-    prefix_text = config["prefixes"].get(str(code_count))
-    if prefix_text is None:
-        raise ValueError(f"strategy selected an undefined {code_count}-token prefix")
+    reference = config["references"].get(reference_id)
+    if reference is None:
+        raise ValueError(f"strategy selected an undefined reference {reference_id!r}")
+    start = int(reference["start"])
+    code_count = int(reference["codes"])
+    if start < 0 or code_count <= 0:
+        raise ValueError(f"reference {reference_id!r} has an invalid code window")
     return {
         "strategy": strategy,
         "speaker": expected_speaker,
         "emotion": emotion.lower(),
+        "reference_id": reference_id,
+        "reference_code_start": start,
+        "reference_code_end": start + code_count,
         "reference_codes": code_count,
-        "reference_text": str(prefix_text),
+        "reference_text": str(reference["text"]),
+        "validation_status": profile.get("validation_status", "board-evaluated"),
     }

@@ -1,0 +1,72 @@
+{
+  "protocol": "neutts-natural-boundary-103-host-screen-v1",
+  "date": "2026-08-20",
+  "model": "NeuTTS-2E Q4_K_M GGUF backbone plus FP32 ONNX NeuCodec",
+  "scope": {
+    "speaker": "emily",
+    "emotion": "angry",
+    "texts": 3,
+    "seeds": [42, 123, 2026],
+    "samples_per_condition": 9,
+    "temperature": 1.0,
+    "top_k": 50,
+    "generation_limit": 450
+  },
+  "conditions": {
+    "prefix103": {
+      "reference_code_start": 0,
+      "reference_code_end": 103,
+      "reference_text": "What we need, helping us to develop",
+      "mean_prompt_tokens": 129.33333333333334,
+      "mean_output_codes": 305.22222222222223,
+      "output_codes_min_median_max": [278, 285, 360],
+      "generation_limit_failures": 0,
+      "micro_wer": 0.34210526315789475,
+      "samples_above_20_percent_wer": 6,
+      "mean_duration_seconds": 6.104444444444444,
+      "emotion2vec_angry_probability": 0.7750530642117236,
+      "emotion2vec_angry_accuracy": 1.0,
+      "dnsmos_sig": 4.040617772728754,
+      "dnsmos_overall": 4.001422681881287
+    },
+    "natural103": {
+      "reference_code_start": 103,
+      "reference_code_end": 206,
+      "reference_text": "the scope of work for a future procurement.",
+      "mean_prompt_tokens": 130.33333333333334,
+      "mean_output_codes": 280.44444444444446,
+      "output_codes_min_median_max": [264, 280, 313],
+      "generation_limit_failures": 0,
+      "micro_wer": 0.06140350877192982,
+      "samples_above_20_percent_wer": 0,
+      "mean_duration_seconds": 5.608888888888889,
+      "emotion2vec_angry_probability": 0.7505181111982746,
+      "emotion2vec_angry_accuracy": 0.8888888888888888,
+      "dnsmos_sig": 4.024293933633551,
+      "dnsmos_overall": 3.914402866745333
+    },
+    "prefix207": {
+      "reference_code_start": 0,
+      "reference_code_end": 207,
+      "reference_text": "What we need, helping us to develop the scope of work for a future procurement.",
+      "mean_prompt_tokens": 242.33333333333334,
+      "mean_output_codes": 279.22222222222223,
+      "output_codes_min_median_max": [259, 278, 296],
+      "generation_limit_failures": 0,
+      "micro_wer": 0.02631578947368421,
+      "samples_above_20_percent_wer": 0,
+      "mean_duration_seconds": 5.584444444444444,
+      "emotion2vec_angry_probability": 0.7410058992845342,
+      "emotion2vec_angry_accuracy": 0.8888888888888888,
+      "dnsmos_sig": 3.950917201805862,
+      "dnsmos_overall": 3.9251982226163693
+    }
+  },
+  "interpretation": "The equal-length natural window reduces Angry micro-WER from 34.2% to 6.1% while retaining native Emotion2Vec Angry probability and DNSMOS quality close to the 207-code reference. This supports reference-context quality, rather than code count alone, as the main cause of the observed prefix103 failures.",
+  "limitations": [
+    "This is a host screening experiment, not an RK3588 RTF measurement.",
+    "Only one speaker, one emotion, three texts and three seeds were tested.",
+    "The natural103 window is a slice of the original encoded sequence; cropped-audio re-encoding remains a useful follow-up control.",
+    "Tempo-normalized Emotion2Vec was excluded because small phase-vocoder stretches caused large classifier shifts on this matrix."
+  ]
+}

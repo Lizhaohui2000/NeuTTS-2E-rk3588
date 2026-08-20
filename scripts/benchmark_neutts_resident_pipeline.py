@@ -12,7 +12,12 @@ from pathlib import Path
 
 import numpy as np
 
-from benchmark_neutts_backbone_server import completion, request_json, summarize
+from benchmark_neutts_backbone_server import (
+    completion,
+    request_json,
+    select_reference_window,
+    summarize,
+)
 from neucodec_rk3588_split_runtime import (
     NPU_CORE_MASK_CHOICES,
     SAMPLE_RATE,
@@ -52,9 +57,15 @@ def main() -> None:
     parser.add_argument("--speakers", type=Path, required=True)
     parser.add_argument("--speaker", default="emily")
     parser.add_argument(
+        "--reference-code-start",
+        type=int,
+        default=0,
+        help="zero-based first reference speech code (default: 0)",
+    )
+    parser.add_argument(
         "--reference-code-limit",
         type=int,
-        help="use only this many leading reference speech codes",
+        help="use this many reference speech codes from --reference-code-start",
     )
     parser.add_argument(
         "--reference-text",
@@ -91,14 +102,13 @@ def main() -> None:
 
     speakers = json.loads(args.speakers.read_text(encoding="utf-8"))
     reference = speakers[args.speaker]
-    reference_codes = reference["codes"]
-    if args.reference_code_limit is not None:
-        if not 0 < args.reference_code_limit <= len(reference_codes):
-            raise ValueError("reference-code-limit must be within the stored reference")
-        if not args.reference_text:
-            raise ValueError("reference-text is required when truncating reference codes")
-        reference_codes = reference_codes[: args.reference_code_limit]
-    reference_text = args.reference_text or reference["text"]
+    reference_codes, reference_text, reference_code_end = select_reference_window(
+        reference["codes"],
+        reference["text"],
+        args.reference_code_start,
+        args.reference_code_limit,
+        args.reference_text,
+    )
     reference_tokens = "".join(f"<|speech_{code}|>" for code in reference_codes)
     prompt = (
         f"<|TEXT_PROMPT_START|>{reference_text}<|{args.emotion.upper()}|>{args.text}"
@@ -177,6 +187,8 @@ def main() -> None:
         "server_health": health,
         "model_alias": props.get("model_alias"),
         "speaker": args.speaker,
+        "reference_code_start": args.reference_code_start,
+        "reference_code_end": reference_code_end,
         "reference_codes": len(reference_codes),
         "reference_text": reference_text,
         "emotion": args.emotion,

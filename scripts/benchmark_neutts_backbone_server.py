@@ -46,6 +46,29 @@ def first_divergence(left: list[int], right: list[int]) -> int | None:
     return None if len(left) == len(right) else min(len(left), len(right))
 
 
+def select_reference_window(
+    codes: list[int],
+    stored_text: str,
+    start: int = 0,
+    limit: int | None = None,
+    window_text: str | None = None,
+) -> tuple[list[int], str, int]:
+    """Select a transcript-matched reference-code window."""
+    if not 0 <= start < len(codes):
+        raise ValueError("reference-code-start must be within the stored reference")
+    if limit is None:
+        end = len(codes)
+    else:
+        if limit <= 0:
+            raise ValueError("reference-code-limit must be positive")
+        end = start + limit
+        if end > len(codes):
+            raise ValueError("reference-code window must be within the stored reference")
+    if (start != 0 or limit is not None) and not window_text:
+        raise ValueError("reference-text is required when selecting a reference-code window")
+    return codes[start:end], window_text or stored_text, end
+
+
 def request_json(url: str, path: str, timeout: float) -> object:
     with urllib.request.urlopen(f"{url.rstrip('/')}{path}", timeout=timeout) as response:
         return json.loads(response.read())
@@ -139,9 +162,15 @@ def main() -> None:
     parser.add_argument("--speakers", type=Path, required=True)
     parser.add_argument("--speaker", default="emily")
     parser.add_argument(
+        "--reference-code-start",
+        type=int,
+        default=0,
+        help="zero-based first reference speech code (default: 0)",
+    )
+    parser.add_argument(
         "--reference-code-limit",
         type=int,
-        help="use only this many leading reference speech codes",
+        help="use this many reference speech codes from --reference-code-start",
     )
     parser.add_argument(
         "--reference-text",
@@ -184,14 +213,13 @@ def main() -> None:
 
     speakers = json.loads(args.speakers.read_text(encoding="utf-8"))
     reference = speakers[args.speaker]
-    reference_codes = reference["codes"]
-    if args.reference_code_limit is not None:
-        if not 0 < args.reference_code_limit <= len(reference_codes):
-            raise ValueError("reference-code-limit must be within the stored reference")
-        if not args.reference_text:
-            raise ValueError("reference-text is required when truncating reference codes")
-        reference_codes = reference_codes[: args.reference_code_limit]
-    reference_text = args.reference_text or reference["text"]
+    reference_codes, reference_text, reference_code_end = select_reference_window(
+        reference["codes"],
+        reference["text"],
+        args.reference_code_start,
+        args.reference_code_limit,
+        args.reference_text,
+    )
     reference_tokens = "".join(f"<|speech_{code}|>" for code in reference_codes)
     emotion_token = f"<|{args.emotion.upper()}|>"
     prompt = (
@@ -238,6 +266,8 @@ def main() -> None:
         "server_health": health,
         "server_props": props,
         "speaker": args.speaker,
+        "reference_code_start": args.reference_code_start,
+        "reference_code_end": reference_code_end,
         "reference_codes": len(reference_codes),
         "reference_text": reference_text,
         "emotion": args.emotion,

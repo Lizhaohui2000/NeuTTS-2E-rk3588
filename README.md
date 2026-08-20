@@ -2,10 +2,11 @@
 
 Unofficial CPU + NPU deployment of [NeuTTS-2E](https://github.com/neuphonic/neutts) on Rockchip RK3588.
 
-This project keeps the autoregressive NeuTTS-2E Q4_K_M backbone on four RK3588 big CPU cores and moves the NeuCodec decoder to the RKNN NPU. It also provides two evaluated reference-prefix strategies:
+This project keeps the autoregressive NeuTTS-2E Q4_K_M backbone on four RK3588 big CPU cores and moves the NeuCodec decoder to the RKNN NPU. It provides two board-evaluated strategies and one natural-boundary research candidate:
 
 - `fixed207`: always use a 207-code speaker reference; the stable quality default.
 - `routed103_207`: use 103 reference codes normally and 207 for `Angry`; the current low-RTF research candidate.
+- `natural103`: use an equal-length 103-code window aligned to a more complete reference phrase; host-screened for `Angry`, with RK3588 validation pending.
 
 > This repository is an independent research adaptation, not an official Neuphonic release. Model weights and generated RKNN files are not redistributed here.
 
@@ -44,6 +45,28 @@ RTF includes every request's prompt prefill, autoregressive generation, RKNN dec
 The routed strategy reduces mean RTF by **11.1%** on the current matrix. The route was selected from only three English texts and five conditions, so it must be validated on held-out texts, seeds and speakers before being treated as a general result.
 
 For a resident low-idle-power profile, set `NEUTTS_POLL_BATCH=0`. It reduced observed idle server CPU from about one core to 0%, with steady backbone RTF changing from 0.837 to 0.851 (about 1.7% slower).
+
+## Natural-boundary 103 study
+
+The original 103-code prefix ends in a real low-energy word boundary, so it is not simply a mid-frame acoustic cut. It still ends on an incomplete linguistic/prosodic context: *“What we need, helping us to develop”*. To isolate reference length from reference content, an equal-length window `[103, 206)` was selected around *“the scope of work for a future procurement.”*
+
+Host screening used the same Q4_K_M backbone, three Angry texts, three seeds, temperature 1.0 and top-k 50. RTF is intentionally omitted because this was not measured on the RK3588.
+
+| Reference window | Codes | Mean prompt tokens | Micro WER | Samples with WER > 20% | Mean output codes | Angry probability | DNSMOS SIG / OVR |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Prefix `[0, 103)` | 103 | 129.3 | 34.2% | 6/9 | 305.2 | **0.775** | **4.041 / 4.001** |
+| Natural `[103, 206)` | 103 | 130.3 | **6.1%** | **0/9** | 280.4 | 0.751 | 4.024 / 3.914 |
+| Stable prefix `[0, 207)` | 207 | 242.3 | 2.6% | 0/9 | 279.2 | 0.741 | 3.951 / 3.925 |
+
+The natural 103 window removes most of the Angry intelligibility failure while preserving emotion strength and signal quality close to the 207-code reference. This indicates that reference-context completeness is a stronger explanation than short length alone. The result is still preliminary: it covers one speaker and one emotion, and the shifted code window must be retested on the board and against a cropped-audio re-encode control.
+
+Same-text, same-seed examples:
+
+| Prefix 103 | Natural 103 | Prefix 207 |
+|---|---|---|
+| [listen](samples/reference_boundary/prefix103_angry.wav?raw=1) | [listen](samples/reference_boundary/natural103_angry.wav?raw=1) | [listen](samples/reference_boundary/prefix207_angry.wav?raw=1) |
+
+Full host metrics are in [`results/natural_boundary_103_host.json`](results/natural_boundary_103_host.json).
 
 ## Audio comparison
 
@@ -127,13 +150,21 @@ python scripts/synthesize_neutts_rk3588.py \
   --speakers /home/orangepi/neutts_2e/scripts/speakers.json \
   --model-dir /home/orangepi/neutts_2e/models_dynamic \
   --output outputs/routed_angry.wav
+
+python scripts/synthesize_neutts_rk3588.py \
+  --strategy natural103 \
+  --emotion angry \
+  --text "The station was unusually quiet this evening." \
+  --speakers /home/orangepi/neutts_2e/scripts/speakers.json \
+  --model-dir /home/orangepi/neutts_2e/models_dynamic \
+  --output outputs/natural103_angry.wav
 ```
 
 The current prefix calibration is for the bundled `emily` reference. Other speakers require their own natural-boundary prefix calibration.
 
 ## Repository contents
 
-- `scripts/synthesize_neutts_rk3588.py`: one-shot resident synthesis with both strategies.
+- `scripts/synthesize_neutts_rk3588.py`: one-shot resident synthesis with all reference strategies.
 - `scripts/neucodec_rk3588_split_runtime.py`: RKNN + CPU NeuCodec runtime.
 - `scripts/benchmark_*`: resident backbone, codec and end-to-end benchmarks.
 - `scripts/export_*`, `split_neucodec_onnx.py`, `convert_neucodec_rknn.py`: export/conversion flow.

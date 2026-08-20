@@ -1,0 +1,24 @@
+{
+  "text": "The meeting begins at nine, and everyone should arrive a few minutes early.",
+  "speaker": "emily",
+  "emotion": "angry",
+  "seed": 123,
+  "temperature": 1.0,
+  "top_k": 50,
+  "backbone": "NeuTTS-2E Q4_K_M GGUF",
+  "decoder": "NeuCodec FP32 ONNX on CPU",
+  "samples": {
+    "prefix103_angry.wav": {
+      "reference_window": [0, 103],
+      "whisper_wer": 1.0
+    },
+    "natural103_angry.wav": {
+      "reference_window": [103, 206],
+      "whisper_wer": 0.07692307692307693
+    },
+    "prefix207_angry.wav": {
+      "reference_window": [0, 207],
+      "whisper_wer": 0.07692307692307693
+    }
+  }
+}
